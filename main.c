@@ -36,11 +36,10 @@ void main_plot(Token t) {
 int main(int argc, char const *argv[]) {
     Token t = main_parse(argc, argv);
     if (t.type == '1' || (t.type == 'D' && t.len==1)) {
-        printf("answer is always: %d\n", t.left);
+        printf("answer is always %d\n", t.left);
     } else {
         main_plot(t);
         free(t.arr);
     }
-    //main_plot(t);
     return 0;
 }
