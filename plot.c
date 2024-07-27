@@ -20,6 +20,7 @@ void draw_horiz(int main_cols) {
     PLOT_BUF[LEFT_OFFSET+main_cols+1] = '\0';
     //PLOT_BUF[LEFT_OFFSET+main_cols+1] = '\0';
     printf("%s\n", PLOT_BUF);
+    fflush(stdout);
 }
 
 // left: The label to put on the left (negative for no label)
@@ -55,10 +56,10 @@ void draw_main(int main_cols, int r, double left, double right) {
         sprintf(PLOT_BUF+LEFT_OFFSET+main_cols+1, "%1.9f", right);
     }
     printf("%s\n", PLOT_BUF);
+    fflush(stdout);
 }
 
 int fit_data(double* data, int len, int main_cols, int main_rows, double* max, int* step) {
-    //printf("len: %d, main_cols: %d\n", len, main_cols);
     int out = 0;
     *max = -1.0;
     for (int i = 0; i < PLOT_BUF_LEN; i++) {
@@ -76,15 +77,11 @@ int fit_data(double* data, int len, int main_cols, int main_rows, double* max, i
         if (len%main_cols > 0) {
             *step += 1;
         }
-        //printf("step: %d\n", step);
-        //printf("main_cols: %d\n", main_cols);
-        //printf("main_rows: %d\n", main_rows);
         // set each value to the max it can see
         int bin = 0;
         int done = 0;
         while (!done) {
             double bin_max = -1.0;
-            //printf("while: bin=%d, ", bin);
             for (int i = 0; i < *step; i++) {
                 if (bin*(*step)+i >= len) {
                     if (bin_max == -1.0) {
@@ -96,17 +93,14 @@ int fit_data(double* data, int len, int main_cols, int main_rows, double* max, i
                     break;
                 }
                 if (data[bin*(*step)+i] > bin_max) {
-                    //printf("data index=%d\n", bin*step+i);
                     bin_max = data[bin*(*step)+i];
                 }
             }
             if (bin_max <= 0.0) {
                 DATA_BUF[bin] = -1;
             } else {
-                //printf("max: %f, bin_max: %f, ", max, bin_max);
                 DATA_BUF[bin] = bin_max/(*max) * main_rows;
             }
-            //printf("DATA_BUF[bin %d]: %d\n", bin, DATA_BUF[bin]);
             bin += 1;
         }
     } else if (len < main_cols) { // Seems to work properly
@@ -168,6 +162,7 @@ void last2(int start, int step, int main_cols) {
     PLOT_BUF2[LEFT_OFFSET+cumulative] = '\0';
     printf("%s\n", PLOT_BUF);
     printf("%s\n", PLOT_BUF2);
+    fflush(stdout);
 }
 
 void draw(int rows, int cols, double* data, int start, int len) {
@@ -193,6 +188,5 @@ void draw(int rows, int cols, double* data, int start, int len) {
         }
         draw_main(main_cols, r, -1.0, right);
     }
-    //printf("main cols: %d\n", main_cols);
     last2(start, step, main_cols);
 }

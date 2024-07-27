@@ -6,7 +6,7 @@
 
 #define complex128_t double complex
 
-inline void ip_unaligned_cpow(double* first, int n) {
+void ip_unaligned_cpow(double* first, int n) {
     complex128_t x = first[0] + I*(first[1]);
     x = cpow(x, n);
     first[0] = creal(x);
@@ -47,9 +47,9 @@ double* ndm(int n, int m) {
             x[i] = 1.0;
         }
     }
-    if (!too_big) {
-        val = pow(m,n);
-    }
+    //if (!too_big) {
+    //    val = pow(m,n);
+    //}
     for (int i = m; i < n*m; i++) {
         x[i] = 0.0;
     }
@@ -58,6 +58,7 @@ double* ndm(int n, int m) {
     exponentiate_forward_rfft(x, n*m, n);
     rfft_backward(plan, x, 1.0/(n*m));
     if (!too_big) {
+        val = pow(m,n);
         for (int i = 0; i < n*m; i++) {
             x[i] = rint(x[i])/val;
         }

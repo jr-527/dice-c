@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include "defs.c"
 #include "term_size.c"
 #include "plot.c"
@@ -17,23 +18,17 @@ Token main_parse(int argc, char const *argv[]) {
 void main_plot(Token t) {
     int rows, cols;
     get_term_size(&rows, &cols);
-    //printf("rows: %d, cols: %d\n", rows, cols);
-    //printf("(plot label TBD)\n");
+    if (rows > 10000 || rows <= 0 || cols > 10000 || cols <= 0) {
+        // we're probably printing to a file or something
+        rows = 30;
+        cols = 80;
+    }
+    //fprintf(stderr, "rows: %d, cols: %d\n", rows, cols);
     draw(rows, cols, t.arr, t.left, t.len);
     return;
-    double data1[N];
-    //double* data1 = malloc(N*sizeof(double));
-    for (int i = 0; i < N; i++) {
-        data1[i] = sin(((double)i)/10000)+1;
-        //data1[i] = ((double)i)/N;
-    }
-    draw(rows, cols, data1, 0, N);
-    //free(data1);
-    //double data[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
-    //draw(rows, cols, data, 0, 10);
 }
 
-int main(int argc, char const *argv[]) {
+void handle_main(int argc, char const *argv[]) {
     Token t = main_parse(argc, argv);
     if (t.type == '1' || (t.type == 'D' && t.len==1)) {
         printf("answer is always %d\n", t.left);
@@ -41,5 +36,37 @@ int main(int argc, char const *argv[]) {
         main_plot(t);
         free(t.arr);
     }
+}
+
+void interactive_mode() {
+    char interactive_buf[1024];
+    char const *fake_argv[2] = {NULL, interactive_buf}; // keeps the warnings happy
+    while (1) {
+        fprintf(stderr, "Enter your input. Enter q to quit.\n");
+        if (fgets(interactive_buf, 1024, stdin) == NULL) {
+            goto err;
+        }
+        int len = strlen(interactive_buf);
+        if (interactive_buf[len-1] != '\n') {
+            goto err;
+        }
+        interactive_buf[len-1] = '\0';
+        if (len == 2 && (interactive_buf[0]=='q' || interactive_buf[0]=='Q')) {
+            return;
+        }
+        //printf("%s\n", fake_argv[0]);
+        handle_main(2, fake_argv);
+    }
+    err:
+        fprintf(stderr, "Error reading input.\n");
+        return;
+}
+
+int main(int argc, char const *argv[]) {
+    if (argc < 2) {
+        interactive_mode();
+        return 0;
+    }
+    handle_main(argc, argv); 
     return 0;
 }
