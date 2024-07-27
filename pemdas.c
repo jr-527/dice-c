@@ -36,8 +36,8 @@ Token addT(Token x, Token y) {
     } else if (x.type == 'D' && y.type == 'D') {
         return addDD(x, y);
     }
-    printf("addT not implemented\n");
-    exit(1);
+    fprintf(stderr, "addT not implemented\n");
+    Exit(1);
     return x;
 }
 
@@ -50,8 +50,8 @@ Token subT(Token x, Token y) {
     } else if (x.type == '1' && y.type == 'D') {
         return sub1D(x, y);
     }
-    printf("subT not implemented\n");
-    exit(1);
+    fprintf(stderr, "subT not implemented\n");
+    Exit(1);
     return x;
 }
 
@@ -66,24 +66,28 @@ Token mulT(Token x, Token y) {
     } else if (x.type == 'D' && y.type == 'D') {
         return mulDD(x, y);
     }
-    printf("mulT not implemented\n");
-    exit(1);
+    fprintf(stderr, "mulT not implemented\n");
+    Exit(1);
     return x;
 }
 
 Token divT(Token x, Token y) {
     if (x.type == '1' && y.type == '1') {
+        if (y.left == 0) {
+            fprintf(stderr, "Cannot divide by zero\n");
+            Exit(1);
+        }
         x.left /= y.left;
         return x;
     } else if (x.type == 'D' && y.type == '1') {
         if (y.left == 0) {
-            printf("Cannot divide by zero");
-            exit(1);
+            fprintf(stderr, "Cannot divide by zero\n");
+            Exit(1);
         }
         return divD1(x, y);
     }
-    printf("divT not implemented");
-    exit(1);
+    fprintf(stderr, "divT not implemented\n");
+    Exit(1);
     Token out;
     out.left = x.left/y.left;
     return out;

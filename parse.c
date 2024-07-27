@@ -1,6 +1,7 @@
 #include "defs.c"
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 /*
 #define MAX_TOKENS 128
@@ -81,13 +82,37 @@ Token str_to_token(char input[]) {
     }
     out.type = '1'; // number
     int offset;
+    if (!isdigit(input[0])) {
+        fprintf(stderr, "Invalid input.\n");
+        Exit(1);
+    }
     sscanf(input, "%d%n", &(out.left), &offset);
+    if (offset > 10) {
+        fprintf(stderr, "Number too big.\n");
+        Exit(1);
+    }
     if (input[offset] == 'd') {
-        sscanf(input+offset+1, "%d", &(out.right));
-        //sscanf(input+offset, "d%d", &(out.right));
-        out.type = 'd'; // distribution
-        //printf("dice: %dd%d\n", out.left, out.right);
+        int count;
+        if (!isdigit(input[offset+1])) {
+            fprintf(stderr, "Invalid input.\n");
+            Exit(1);
+        }
+        sscanf(input+offset+1, "%d%n", &(out.right), &count);
+        if (count > 10) {
+            fprintf(stderr, "Number too big.\n");
+            Exit(1);
+        }
+        if (out.left == 0 || out.right == 0) {
+            out.type = '1';
+            out.left = 0;
+        } else {
+            out.type = 'd';
+        }
     } else {
+        if (strlen(input+offset) > 0) {
+            fprintf(stderr, "Invalid input.\n");
+            Exit(1);
+        }
         //printf("integer: %d\n", out.left);
     }
     return out;

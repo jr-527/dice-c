@@ -44,11 +44,16 @@ void interactive_mode() {
     while (1) {
         fprintf(stderr, "Enter your input. Enter q to quit.\n");
         if (fgets(interactive_buf, 1024, stdin) == NULL) {
-            goto err;
+            fprintf(stderr, "Error reading input.\n");
+            continue;
         }
         int len = strlen(interactive_buf);
+        if (len == 1) {
+            continue;
+        }
         if (interactive_buf[len-1] != '\n') {
-            goto err;
+            fprintf(stderr, "Error reading input.\n");
+            continue;
         }
         interactive_buf[len-1] = '\0';
         if (len == 2 && (interactive_buf[0]=='q' || interactive_buf[0]=='Q')) {
@@ -57,13 +62,11 @@ void interactive_mode() {
         //printf("%s\n", fake_argv[0]);
         handle_main(2, fake_argv);
     }
-    err:
-        fprintf(stderr, "Error reading input.\n");
-        return;
 }
 
 int main(int argc, char const *argv[]) {
     if (argc < 2) {
+        exit_flag = 1;
         interactive_mode();
         return 0;
     }

@@ -61,6 +61,17 @@ void print_token(Token t) {
     }
 }
 
+int exit_flag = 0;
+void Exit(int n) {
+    if (exit_flag) {
+        fprintf(stderr, "Irrecoverable error. Exiting.\n");
+        #ifdef _WIN32
+        system("pause");
+        #endif
+    }
+    exit(n);
+}
+
 #define MAX_TOKENS 128
 #define TOKEN_LEN 128
 
