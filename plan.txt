@@ -1,0 +1,33 @@
+The different parts should be modular, so that they can be implemented in different ways.
+Ideally, it should be modular enough that the calculations and plotting could be done using
+my existing Python stuff.
+
+1. Use operator-precedence parsing on input (shunting yard algorithm or whatever)
+   - DONE: https://en.wikipedia.org/wiki/Shunting_yard_algorithm
+   - DONE: https://en.wikipedia.org/wiki/Operator-precedence_parser#Pseudocode
+   - Multi-character operators, ie !=, >=, ==, **, etc. For '=' or '*', just check if
+     there is a previous token and if it's a relevant operator. If so, just change that
+     token's type.
+   - Unary minus: If token is minus, check if there is a previous token and if it's an
+     operator or parenthese. If so, set a flag, then the next token should have its value of
+     left multiplied by -1.
+
+2. Do calculations
+   - While RPN only needs a stack of size 4, the shunting-yard algorithm can produce large
+     stacks. Even if we try to lazily assign memory, we'll need more than 4 pieces of
+     memory at once for things like (0+1)+((0+2)*((0+3)+(0+4)*(0+5))). Instead, it's probably
+     best if I just allocate memory for tokens as needed.
+   - The arithmetic functions should de-allocate the arrays of their arguments, should the
+     arrays exist, and allocate new arrays for the returned thing, although when adding or
+     subtracting constants with distributions or multiplying distributions by 1 or -1, we can
+     just re-use the distribution's array.
+   - use FFTW
+
+3. Plot results
+   - can plot in terminal
+   - do stuff in Java? Maybe JFreeChart?
+   - Maybe use gnuplot
+   - Communication:
+     - shared memory?
+     - write to file?
+
