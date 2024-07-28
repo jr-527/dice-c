@@ -36,9 +36,9 @@ void draw_main(int main_cols, int r, double left, double right) {
     }
     for (int i = LEFT_OFFSET; i < LEFT_OFFSET+main_cols; i++) {
         if (DATA_BUF[i-LEFT_OFFSET] >= r) {
-            if (DATA_BUF[i-LEFT_OFFSET] >= r+.666666666667) {
+            if (DATA_BUF[i-LEFT_OFFSET] >= r+(2.0/3)) {
                 PLOT_BUF[i] = '@';
-            } else if (DATA_BUF[i-LEFT_OFFSET] >= r+.333333333333) {
+            } else if (DATA_BUF[i-LEFT_OFFSET] >= r+(1.0/3)) {
                 PLOT_BUF[i] = 'x';
             } else if (DATA_BUF[i-LEFT_OFFSET] >= r+.1) {
                 PLOT_BUF[i] = '_';
@@ -59,16 +59,30 @@ void draw_main(int main_cols, int r, double left, double right) {
     fflush(stdout);
 }
 
-int fit_data(double* data, int len, int main_cols, int main_rows, double* max, int* step) {
+int fit_data(double* data, int len, int main_cols, int main_rows, int start,
+             double* max, int* step, double* mean, double* stdev) {
     int out = 0;
-    *max = -1.0;
+    double mu, s, weight_sum, new_max;
+    mu = s = weight_sum = new_max = 0.0;
+    for (int i = 0; i < len; i++) {
+        double weight = data[i];
+        if (weight > new_max) {
+            new_max = weight;
+        }
+        if (weight==0.0) {
+            continue;
+        }
+        int x = i+start;
+        weight_sum += weight;
+        double old_mu = mu;
+        mu += (weight / weight_sum) * (x - old_mu);
+        s += weight * (x - old_mu) * (x - mu);
+    }
+    *max = new_max;
+    *mean = mu;
+    *stdev = sqrt(s/weight_sum);
     for (int i = 0; i < PLOT_BUF_LEN; i++) {
         DATA_BUF[i] = -1.0;
-    }
-    for (int i = 0; i < len; i++) {
-        if (data[i] > *max) {
-            *max = data[i];
-        }
     }
     //int out_len = -1;
     *step = 1;
@@ -174,11 +188,14 @@ void draw(int rows, int cols, double* data, int start, int len) {
     }
     // we fit the data into DATA_BUF
     int main_cols = cols-LEFT_OFFSET-RIGHT_OFFSET;
-    int main_rows = rows-5;
+    int main_rows = rows-6;
     //draw_horiz(main_cols);
     double max;
     int step;
-    main_cols = fit_data(data, len, main_cols, main_rows, &max, &step);
+    double mean, stdev;
+    main_cols = fit_data(data, len, main_cols, main_rows, start,
+                         &max, &step, &mean, &stdev);
+    printf("Average: %f, Standard deviation: %f\n", mean, stdev);
     draw_horiz(main_cols);
     int counter = 0;
     for (int r = main_rows-1; r >= 0; r--) {

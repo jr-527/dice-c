@@ -37,6 +37,7 @@ int char_is_operator(char x) {
         case '>': case '<':
         case 'g': case 'l':
         case '=': case 'n':
+        case '!': // needed to make logic work
             return 1;
         default:
             return 0;
@@ -91,7 +92,5 @@ char PLOT_BUF[PLOT_BUF_LEN];
 double DATA_BUF[PLOT_BUF_LEN];
 #define LEFT_OFFSET 1
 #define RIGHT_OFFSET 12
-
-
 
 #endif

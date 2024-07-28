@@ -21,6 +21,7 @@ void exponentiate_forward_rfft(double* arr, size_t len, int n) {
 }
 
 void print_rfft_forward(double* start, size_t len) {
+    printf("%f ", start[0]);
     for (size_t i = 1; i < len-1; i += 2) {
         printf("%f%+fi ", start[i], start[i+1]);
     }
@@ -28,11 +29,11 @@ void print_rfft_forward(double* start, size_t len) {
 }
 
 void print_real_arr(double* start, size_t len) {
-    printf("arr:\n");
+    printf("[");
     for (size_t i = 0; i < len; i++) {
         printf("%f ", start[i]);
     }
-    printf("\n");
+    printf("]\n");
 }
 
 double* ndm(int n, int m) {
@@ -47,9 +48,6 @@ double* ndm(int n, int m) {
             x[i] = 1.0;
         }
     }
-    //if (!too_big) {
-    //    val = pow(m,n);
-    //}
     for (int i = m; i < n*m; i++) {
         x[i] = 0.0;
     }
@@ -112,14 +110,15 @@ double* convolve(double* x, size_t xlen, double* y, size_t ylen, size_t* new_len
     x[0] *= y[0];
     for (size_t i = 1; i < len-1; i += 2) {
         complex128_t temp = x[i] + I*x[i+1];
-        temp *= y[i] + I*x[i+1];
+        temp *= y[i] + I*y[i+1];
         x[i] = creal(temp);
         x[i+1] = cimag(temp);
     }
+    if (len % 2 == 0) {
+        x[len-1] *= y[len-1];
+    }
     free(y);
     rfft_backward(plan, x, 1.0/(len));
-    //printf("convolve out\n");
-    //print_real_arr(x, len);
     return x;
 }
 
@@ -189,6 +188,22 @@ double* divide_indices(double* x, size_t* x_len, int* x_left, int n) {
     return out;
 }
 
+void ip_cumsum(double* x, size_t len) {
+    if (len == 0) {
+        return;
+    }
+    // Kahan summation
+    double sum = x[0];
+    double c = 0.0;
+    for (size_t i = 1; i < len; i++) {
+        double y = x[i] - c;
+        double t = sum + y;
+        c = (t-sum)-y;
+        sum = t;
+        x[i] = sum;
+    }
+}
+
 inline void ip_unaligned_cmul(double* x, double* y) {
     // x *= y
     complex128_t out = x[0] + I*(x[1]);
@@ -196,9 +211,3 @@ inline void ip_unaligned_cmul(double* x, double* y) {
     x[0] = creal(out);
     x[1] = cimag(out);
 }
-/*
-int main() {
-    double* x = ndm(3, 6);
-    return 0;
-}
-*/

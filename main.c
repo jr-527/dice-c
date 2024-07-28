@@ -7,7 +7,6 @@
 #include "plot.c"
 #include "parse.c"
 #include "pemdas.c"
-#define N 62831
 
 Token main_parse(int argc, char const *argv[]) {
     int n = parse_token_main(argc, argv);
