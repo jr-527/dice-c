@@ -487,4 +487,28 @@ Token leqDD(Token d1, Token d2) {
     d1.arr[0] = 1.0-sum;
     return d1;
 }
-# define geqDD(x,y) leqDD(y,x)
+#define geqDD(x,y) leqDD(y,x)
+
+// @ operator - the (mostly) noncommutative multiplication operator
+// It represents evaluating the LHS, converting the result to an integer,
+// then adding together that many copies of the RHS.
+// This is different from the * operator, which represents evaluating the LHS,
+// evaluating the RHS, then multiplying.
+Token of_1D(Token i, Token d) {
+    // autoconvolve frees, and we free if we don't use it.
+    // shrinking is handled
+    if (i.left == 0) {
+        free(d.arr);
+        return i;
+    }
+    if (i.left < 0) {
+        d.left = i.left*(d.left + d.len - 1);
+    } else {
+        d.left = i.left*d.left;
+    }
+    d.arr = autoconvolve(d.arr, d.len, i.left, &(d.len));
+    return d;
+}
+
+// In this case it's the same as regular multiplication.
+#define of_D1(x,y) mulD1(x,y)

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
+#include <string.h>
 #include "pocketfft-master/pocketfft.h"
 
 #define complex128_t double complex
@@ -37,7 +38,7 @@ void print_real_arr(double* start, int64_t len) {
 }
 
 double* ndm(int n, int m) {
-    double* x = malloc(m*n*sizeof(double));
+    double* x = calloc(m*n, sizeof(double));
     int too_big = log2(n)*m > 52;
     // when n=m=150, n^m is too big to store as a double.
     double val;
@@ -48,9 +49,9 @@ double* ndm(int n, int m) {
             x[i] = 1.0;
         }
     }
-    for (int i = m; i < n*m; i++) {
-        x[i] = 0.0;
-    }
+    //for (int i = m; i < n*m; i++) {
+    //    x[i] = 0.0;
+    //}
     rfft_plan plan = make_rfft_plan(n*m);
     rfft_forward(plan, x, 1.0);
     exponentiate_forward_rfft(x, n*m, n);
@@ -71,6 +72,26 @@ void flip(double* arr, int64_t len) {
         arr[i] = arr[len-1-i];
         arr[len-1-i] = temp;
     }
+}
+
+double* autoconvolve(double* x, int64_t len, int64_t n, int64_t* outlenptr) {
+    int negative = 0;
+    if (n < 0) {
+        negative = 1;
+    }
+    int64_t outlen = (len-1)*n + 1;
+    *outlenptr = outlen;
+    double* out = calloc(outlen, sizeof(double));
+    memcpy(out, x, n*sizeof(double));
+    free(x);
+    rfft_plan plan = make_rfft_plan(outlen);
+    rfft_forward(plan, out, 1.0);
+    exponentiate_forward_rfft(out, outlen, n);
+    rfft_backward(plan, out, 1.0/outlen);
+    if (negative) {
+        flip(out, outlen);
+    }
+    return out;
 }
 
 double* grow_by_int(double* arr, int64_t len, int n, int64_t* new_size) {

@@ -182,6 +182,20 @@ Token leqT(Token x, Token y) {
     return x;
 }
 
+Token of_T(Token x, Token y) {
+    if (x.type == '1' && y.type == '1') {
+        x.left *= y.left;
+        return x;
+    } else if (x.type == 'D' && y.type == '1') {
+        return of_D1(x,y);
+    } else if (x.type == '1' && y.type == 'D') {
+        return of_1D(x,y);
+    }
+    fprintf(stderr, "of_T not implemented for %c and %c\n", x.type, y.type);
+    Exit(1);
+    return x;
+}
+
 int shunting_yard(Token tokens[], int num_tokens) {
     int q = 0;
     int s = 0;
@@ -245,6 +259,7 @@ Token reverse_polish(int q) {
             case '<': next = lesT(stack[s-2], stack[s-1]); break;
             case 'l': next = leqT(stack[s-2], stack[s-1]); break;
             case '-': next = subT(stack[s-2], stack[s-1]); break;
+            case '@': next = of_T(stack[s-2], stack[s-1]); break;
             default:
                 fprintf(stderr, "type '%c' not implemented in reverse_polish\n", next.type);
                 Exit(1);
