@@ -22,9 +22,9 @@ g, l, n         >=, <=, != (\geq, \leq, \neq)
 */
 typedef struct Token {
     double* arr;
-    size_t len;
-    int left;
-    int right;
+    int64_t len;
+    int64_t left;
+    int64_t right;
     char type;
 } Token;
 
@@ -52,11 +52,11 @@ void print_token(Token t) {
     if (is_operator(t) || t.type == '(' || t.type == ')') {
         printf(" %c ", t.type);
     } else if (t.type == 'd') {
-        printf(" %dd%d ", t.left, t.right);
+        printf(" %ldd%ld ", t.left, t.right);
     } else if (t.type == 'D') {
-        printf(" <D start:%d,len:%ld> ", t.left, t.len);
+        printf(" <D start:%ld,len:%ld> ", t.left, t.len);
     } else if (t.type == '1'){
-        printf(" %d ", t.left);
+        printf(" %ld ", t.left);
     } else {
         printf(" <%c> ", t.type);
     }

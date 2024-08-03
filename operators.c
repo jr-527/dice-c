@@ -22,33 +22,40 @@ This is where all the memory management happens. Any time a type 'D' is input, e
 (2) d.arr is set to realloc(d.arr, ...) somewhere
 (3) d.arr is modified in-place
 
+Furthermore, any time we perform an operation that can shrink an array, we need to check if
+that can cause the array to have length 1. In that case, free the array and change type to
+'1'.
+
 I think we only need
 ___D1
 ___DD
 ___1D
 */
 
-double T_at(Token d, int n) {
-    if (n < d.left || n >= d.left + (int)d.len) {
+double T_at(Token d, int64_t n) {
+    if (n < d.left || n >= d.left + d.len) {
         return 0.0;
     }
     return d.arr[n-d.left];
 }
 
 Token addD1(Token d, Token i) {
-    // Memory: stack, safe
+    // Memory: stack
+    // Cannot shrink
     d.left += i.left;
     return d;
 }
 
 Token add1D(Token i, Token d) {
-    // Memory: stack, safe
+    // Memory: stack
+    // Cannot shrink
     d.left += i.left;
     return d;
 }
 
 Token addDD(Token d1, Token d2) {
     // Memory: convolve reallocates + returns d1.arr, reallocates + frees d2.arr
+    // Cannot shrink
     // size_t new_len;
     d1.arr = convolve(d1.arr, d1.len, d2.arr, d2.len, &(d1.len));
     //d1.len = new_len;
@@ -59,20 +66,23 @@ Token addDD(Token d1, Token d2) {
 
 Token subD1(Token d, Token i) {
     // Memory: stack, safe
+    // Cannot shrink
     d.left -= i.left;
     return d;
 }
 
 Token sub1D(Token i, Token d) {
-    // Memory: in-place, safe
+    // Memory: in-place
+    // Cannot shrink
     flip(d.arr, d.len);
-    d.left = i.left-(d.left+(int)d.len-1);
+    d.left = i.left-(d.left+d.len-1);
     return d;
 }
 
 Token mul1D(Token i, Token d) {
     // Memory: dynamic, either freed here or reallocated + returned by grow_by_int
-    long int new_size;
+    // Cannot shrink
+    int64_t new_size;
     if (i.left == 0) {
         free(d.arr);
         i.left = 0;
@@ -91,7 +101,8 @@ Token mul1D(Token i, Token d) {
 
 Token mulDD(Token d1, Token d2) {
     // Memory: multiply_pmfs frees d1.arr, d2.arr, and returns a new array
-    int lower, upper;
+    // Cannot shrink
+    int64_t lower, upper;
     d1.arr = multiply_pmfs(d1.arr, d1.len, d2.arr, d2.len,
                            d1.left, d2.left, &lower, &upper);
     d1.left = lower;
@@ -101,26 +112,56 @@ Token mulDD(Token d1, Token d2) {
 
 Token divD1(Token d1, Token i) {
     // Memory: divide_indices frees d1.arr, returns a new array
+    // Shrinking is handled
     d1.arr = divide_indices(d1.arr, &(d1.len), &(d1.left), i.left);
+    if (d1.len == 1) {
+        free(d1.arr);
+        d1.type = '1';
+    }
     return d1;
+}
+
+Token divDD(Token d1, Token d2) {
+    // Memory: divide_pmfs frees d1.arr, d2.arr, returns a new array
+    // Shrinking is handled
+    d1.arr = divide_pmfs(d1.arr, d1.len, d2.arr, d2.len, d1.left, d2.left,
+                         &d1.left, &d1.len);
+    if (d1.len == 1) {
+        free(d1.arr);
+        d1.type = '1';
+    }
+    return d1;
+}
+
+Token div1D(Token i, Token d) {
+    // Memory: handled by divDD
+    // Shrinking is handled by divDD
+    i.type = 'D';
+    i.arr = malloc(sizeof(double));
+    i.len = 1;
+    i.arr[0] = 1.0;
+    return divDD(i,d);
 }
 
 Token equ11(Token i1, Token i2) {
     // Memory: stack, safe
+    // Cannot shrink
     i1.left = (i1.left == i2.left);
     return i1;
 }
 Token neq11(Token i1, Token i2) {
     // Memory: stack, safe
+    // Cannot shrink
     i1.left = (i1.left != i2.left);
     return i1;
 }
 
 Token equD1(Token d, Token i) {
     // Memory: reallocated + returned
+    // Shrinking is handled
     //double* new_arr = malloc(2*sizeof(double));
     double p = 0.0;
-    if (d.left <= i.left && i.left < d.left+(int)d.len) {
+    if (d.left <= i.left && i.left < d.left+d.len) {
         if (d.len == 1) {
             free(d.arr); // certain to be true, demote to integer
             i.left = 1;
@@ -144,6 +185,7 @@ Token equD1(Token d, Token i) {
 #define equ1D(i,d) equD1(d,i)
 Token neqD1(Token d, Token i) {
     // Memory: managed by equD1
+    // Shrinking: handled by equD1
     d = equD1(d, i);
     if (d.type == '1') {
         d.left = 1-d.left;
@@ -158,13 +200,14 @@ Token neqD1(Token d, Token i) {
 
 Token equDD(Token d1, Token d2) {
     // Memory: d2 is freed, d1 is reallocated + returned
+    // Shrinking is handled (input can't be singular -> only certain on disjoint)
     // WLOG d1.left <= d2.left
     if (d1.left > d2.left) {
         Token temp = d1;
         d1 = d2;
         d2 = temp;
     }
-    if (d2.left >= d1.left+(int)d1.len) {
+    if (d2.left >= d1.left+d1.len) {
         // distributions are disjoint
         free(d1.arr);
         free(d2.arr);
@@ -181,11 +224,11 @@ Token equDD(Token d1, Token d2) {
     }
     double sum = 0.0;
     double c = 0.0;
-    for (int i = 0; i < (int)d2.len; i++) {
+    for (int64_t i = 0; i < d2.len; i++) {
         // i is position in d2.arr
         // j is position in d1.arr
-        int j = i + (d2.left - d1.left);
-        if (j >= (int)d1.len) {
+        int64_t j = i + (d2.left - d1.left);
+        if (j >= d1.len) {
             break;
         }
         double y = d1.arr[j] * d2.arr[i] - c;
@@ -204,6 +247,7 @@ Token equDD(Token d1, Token d2) {
 }
 Token neqDD(Token d1, Token d2) {
     // Memory: handled by neqDD
+    // Shrinking: handled by equDD
     Token d = equDD(d1, d2);
     if (d.type == '1') {
         d.left = 1-d.left;
@@ -217,11 +261,14 @@ Token neqDD(Token d1, Token d2) {
 
 Token gre11(Token x, Token y) {
     // Memory: all stack memory
+    // Cannot shrink
     x.left = (x.left > y.left);
     return x;
 }
 #define les11(x,y) gre11(y,x)
 Token geq11(Token x, Token y) {
+    // Memory: stack
+    // Cannot shrink
     x.left = (x.left >= y.left);
     return x;
 } //     x <= y   <->   y >= x
@@ -229,10 +276,11 @@ Token geq11(Token x, Token y) {
 
 Token greD1(Token d, Token i) {
     // Memory: reallocated and returned
+    // Shrinking: handled
     // d > i
     double p;
-    int d_index = i.left - d.left;
-    if (d_index >= (int)d.len - 1) {
+    int64_t d_index = i.left - d.left;
+    if (d_index >= d.len - 1) {
         // i is >= max possible value of d, so always false
         free(d.arr);
         i.left = 0;
@@ -259,8 +307,10 @@ Token greD1(Token d, Token i) {
 } //     i < d   <->   d > i
 #define les1D(i,d) greD1(d,i)
 Token geqD1(Token d, Token i) {
+    // Memory: handled here/by greD1
+    // shrinking is handled
     // d >= i
-    if (d.left + (int)d.len <= i.left) {
+    if (d.left + d.len <= i.left) {
         // all d < i, so always false
         free(d.arr);
         i.left = 0;
@@ -290,10 +340,11 @@ Token geqD1(Token d, Token i) {
 
 Token gre1D(Token i, Token d) {
     // Memory: Reallocated and returned
+    // Shrinking is handled
     // i > d
     double p;
-    int d_index = i.left - d.left;
-    if (d_index >= (int)d.len) {
+    int64_t d_index = i.left - d.left;
+    if (d_index >= d.len) {
         free(d.arr);
         i.left = 1;
         return i;
@@ -315,14 +366,15 @@ Token gre1D(Token i, Token d) {
 } //     i < d   <->  d > i
 #define lesD1(i,d) gre1D(d,i)
 Token geq1D(Token i, Token d) {
-    // i >= d
     // Memory: handled by gre1D
+    // Shrinking is handled
+    // i >= d
     if (i.left < d.left) {
         // i < all d, so always false
         free(d.arr);
         i.left = 0;
         return i;
-    } else if (i.left >= d.left+(int)d.len-1) {
+    } else if (i.left >= d.left+d.len-1) {
         // i >= all d, so always true
         free(d.arr);
         i.left = 1;
@@ -345,16 +397,17 @@ Token geq1D(Token i, Token d) {
 #define leqD1(d,i) geq1D(i,d)
 
 Token greDD(Token d1, Token d2) {
-    // d1 > d2
     // Memory: d2 is freed, d1 is freed or reallocated + returned
-    if (d1.left >= d2.left+(int)d2.len) {
+    // Shrinking is handled
+    // d1 > d2
+    if (d1.left >= d2.left+d2.len) {
         // all d1 > all d2, certainly true
         free(d1.arr);
         free(d2.arr);
         d1.type = '1';
         d1.left = 1;
         return d1;
-    } else if (d1.left+(int)d1.len-1 <= d2.left) {
+    } else if (d1.left+d1.len-1 <= d2.left) {
         // all d1 <= all d2, certainly false
         free(d1.arr);
         free(d2.arr);
@@ -365,8 +418,8 @@ Token greDD(Token d1, Token d2) {
     double sum = 0.0;
     double c = 0.0;
     ip_cumsum(d1.arr, d1.len);
-    for (int n = d2.left; n < d2.left+(int)d2.len; n++) {
-        if (n >= d1.left+(int)d1.len) {
+    for (int64_t n = d2.left; n < d2.left+d2.len; n++) {
+        if (n >= d1.left+d1.len) {
             break;
         }
         // P(d1 > d2) = Sum_{n in d2} P(d1>i | d2=n) * P(d2=n) by law of total probability
@@ -390,16 +443,17 @@ Token greDD(Token d1, Token d2) {
 #define lesDD(x,y) greDD(y,x)
 
 Token leqDD(Token d1, Token d2) {
-    // d1 <= d2
     // Memory: d2 is freed, d1 is freed or reallocated + returned
-    if (d1.left >= d2.left+(int)d2.len) {
+    // Shrinking is handled
+    // d1 <= d2
+    if (d1.left >= d2.left+d2.len) {
         // all d1 > all d2, certainly false
         free(d1.arr);
         free(d2.arr);
         d1.type = '1';
         d1.left = 0;
         return d1;
-    } else if (d1.left+(int)d1.len-1 <= d2.left) {
+    } else if (d1.left+d1.len-1 <= d2.left) {
         // all d1 <= all d2, certainly true
         free(d1.arr);
         free(d2.arr);
@@ -410,8 +464,8 @@ Token leqDD(Token d1, Token d2) {
     double sum = 0.0;
     double c = 0.0;
     ip_cumsum(d1.arr, d1.len);
-    for (int n = d2.left; n < d2.left+(int)d2.len; n++) {
-        if (n >= d1.left+(int)d1.len) {
+    for (int64_t n = d2.left; n < d2.left+d2.len; n++) {
+        if (n >= d1.left+d1.len) {
             break;
         }
         // P(d1 <= d2) = 1-P(d1 > d2) = 1-Sum_{n in d2} P(d1>i | d2=n) * P(d2=n) by law of total probability

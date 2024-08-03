@@ -90,7 +90,7 @@ Token str_to_token(char input[]) {
         fprintf(stderr, "Invalid input (type 1).\n");
         Exit(1);
     }
-    sscanf(input, "%d%n", &(out.left), &offset);
+    sscanf(input, "%ld%n", &(out.left), &offset);
     if (offset > 10) {
         fprintf(stderr, "Number too big.\n");
         Exit(1);
@@ -101,7 +101,7 @@ Token str_to_token(char input[]) {
             fprintf(stderr, "Invalid input (type 2).\n");
             Exit(1);
         }
-        sscanf(input+offset+1, "%d%n", &(out.right), &count);
+        sscanf(input+offset+1, "%ld%n", &(out.right), &count);
         if (count > 10) {
             fprintf(stderr, "Number too big.\n");
             Exit(1);

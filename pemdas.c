@@ -82,6 +82,10 @@ Token divT(Token x, Token y) {
             Exit(1);
         }
         return divD1(x, y);
+    } else if (x.type == '1' && y.type == 'D') {
+        return div1D(x, y);
+    } else if (x.type == 'D' && y.type == 'D') {
+        return divDD(x, y);
     }
     fprintf(stderr, "divT not implemented for %c and %c\n", x.type, y.type);
     Exit(1);

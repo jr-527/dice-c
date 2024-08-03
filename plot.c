@@ -59,12 +59,12 @@ void draw_main(int main_cols, int r, double left, double right) {
     fflush(stdout);
 }
 
-int fit_data(double* data, int len, int main_cols, int main_rows, int start,
+int fit_data(double* data, int64_t len, int main_cols, int main_rows, int64_t start,
              double* max, int* step, double* mean, double* stdev) {
     int out = 0;
     double mu, s, weight_sum, new_max;
     mu = s = weight_sum = new_max = 0.0;
-    for (int i = 0; i < len; i++) {
+    for (int64_t i = 0; i < len; i++) {
         double weight = data[i];
         if (weight > new_max) {
             new_max = weight;
@@ -72,7 +72,7 @@ int fit_data(double* data, int len, int main_cols, int main_rows, int start,
         if (weight==0.0) {
             continue;
         }
-        int x = i+start;
+        int64_t x = i+start;
         weight_sum += weight;
         double old_mu = mu;
         mu += (weight / weight_sum) * (x - old_mu);
@@ -122,7 +122,7 @@ int fit_data(double* data, int len, int main_cols, int main_rows, int start,
         if ((*step+1)*(len-1)+1 < main_cols) {
             *step += 1;
         }
-        int i = 0;
+        int64_t i = 0;
         while (i < len) {
             DATA_BUF[i*(*step)] = data[i]/(*max)*main_rows;
             i += 1;
@@ -130,7 +130,7 @@ int fit_data(double* data, int len, int main_cols, int main_rows, int start,
         out = *step*(len-1)+1;
         *step *= -1;
     } else { // Should work properly
-        for (int i = 0; i < len; i++) {
+        for (int64_t i = 0; i < len; i++) {
             DATA_BUF[i] = data[i]/(*max)*main_rows;
         }
         out = len;
@@ -138,7 +138,7 @@ int fit_data(double* data, int len, int main_cols, int main_rows, int start,
     return out;
 }
 
-void last2(int start, int step, int main_cols) {
+void last2(int64_t start, int step, int main_cols) {
     char PLOT_BUF2[PLOT_BUF_LEN];
     for (int i = 0; i < PLOT_BUF_LEN; i++) {
         PLOT_BUF2[i] = ' ';
@@ -179,7 +179,7 @@ void last2(int start, int step, int main_cols) {
     fflush(stdout);
 }
 
-void draw(int rows, int cols, double* data, int start, int len) {
+void draw(int rows, int cols, double* data, int64_t start, int64_t len) {
     for (int i = 0; i < PLOT_BUF_LEN; i++) {
         PLOT_BUF[i] = '\0';
     }
