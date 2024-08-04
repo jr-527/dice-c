@@ -190,8 +190,30 @@ Token of_T(Token x, Token y) {
         return of_D1(x,y);
     } else if (x.type == '1' && y.type == 'D') {
         return of_1D(x,y);
+    } else if (x.type == 'D' && y.type == 'D') {
+        return of_DD(x,y);
     }
     fprintf(stderr, "of_T not implemented for %c and %c\n", x.type, y.type);
+    Exit(1);
+    return x;
+}
+
+Token modT(Token x, Token y) {
+    if (x.type == '1' && y.type == '1') {
+        if (y.left == 0) {
+            goto modby0;
+        }
+        return mod11(x,y);
+    } else if (x.type == 'D' && y.type == '1') {
+        if (y.left == 0) {
+            goto modby0;
+        }
+        return modD1(x,y);
+    }
+    fprintf(stderr, "modT not implemented for %c and %c\n", x.type, y.type);
+    Exit(1);
+    modby0:
+    fprintf(stderr, "Cannot do modulo 0\n");
     Exit(1);
     return x;
 }
@@ -260,6 +282,7 @@ Token reverse_polish(int q) {
             case 'l': next = leqT(stack[s-2], stack[s-1]); break;
             case '-': next = subT(stack[s-2], stack[s-1]); break;
             case '@': next = of_T(stack[s-2], stack[s-1]); break;
+            case '%': next = modT(stack[s-2], stack[s-1]); break;
             default:
                 fprintf(stderr, "type '%c' not implemented in reverse_polish\n", next.type);
                 Exit(1);

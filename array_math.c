@@ -6,6 +6,9 @@
 #include "pocketfft-master/pocketfft.h"
 
 #define complex128_t double complex
+#ifndef M_PI
+#define M_PI (3.14159265358979323846)
+#endif
 
 void ip_unaligned_cpow(double* first, int n) {
     complex128_t x = first[0] + I*(first[1]);
@@ -14,17 +17,49 @@ void ip_unaligned_cpow(double* first, int n) {
     first[1] = cimag(x);
 }
 
+void accum_unaligned_cpow(double* first, double* out, int64_t n, double factor,
+                          complex128_t rotate) {
+    complex128_t x = first[0] + I*(first[1]);
+    x = rotate * factor * cpow(x, n);
+    out[0] += creal(x);
+    out[1] += cimag(x);
+}
+
 void exponentiate_forward_rfft(double* arr, int64_t len, int n) {
     arr[0] = pow(arr[0], n);
     for (int64_t i = 1; i < len-1; i += 2) {
         ip_unaligned_cpow(arr+i, n);
     }
+    if (len%2 == 0) {
+        arr[len-1] = pow(arr[len-1], n);
+    }
+}
+
+void accum_exp_forward_rfft(double* from, double* to, double factor, int64_t len,
+                            int n, int64_t offset) {
+    to[0] += factor * pow(from[0], n);
+    int j = 0;
+    for (int64_t i = 1; i < len-1; i+= 2) {
+        j++;
+        // multiply each element by by e^{-2pi I i/outlen} where I is sqrt(-1)
+        complex128_t rotate = cos((-2*M_PI*j*offset)/len) + I*sin((-2*M_PI*j*offset)/len);
+        accum_unaligned_cpow(from+i, to+i, n, factor, rotate);
+    }
+    if (len%2 == 0) {
+        j++;
+        complex128_t rotate = cos((-2*M_PI*j*offset)/len) + I*sin((-2*M_PI*j*offset)/len);
+        to[len-1] += rotate*factor*pow(from[len-1], n);
+    }
+
 }
 
 void print_rfft_forward(double* start, int64_t len) {
     printf("%f ", start[0]);
     for (int64_t i = 1; i < len-1; i += 2) {
         printf("%f%+fi ", start[i], start[i+1]);
+    }
+    if (len%2 == 0) {
+        printf("(%f)", start[len-1]);
     }
     printf("\n");
 }
@@ -184,6 +219,71 @@ double* multiply_pmfs(double* x, int64_t xlen,
     return out;
 }
 
+double* at_multiply_pmfs(double* x, int64_t xlen, double* y, int64_t ylen,
+                         int64_t xleft, int64_t yleft, int64_t* lower, int64_t* upper) {
+    multiply_pmfs_bounds(xlen, ylen, xleft, yleft, lower, upper);
+    //printf("at_multiply_pmfs lower:%ld, upper: %ld\n", *lower, *upper);
+    int64_t outlen = (*upper)-(*lower)+1;
+    double* out = calloc(outlen, sizeof(double));
+    double* forward = calloc(outlen, sizeof(double));
+    memcpy(forward, y, ylen*sizeof(double));
+    rfft_plan plan = make_rfft_plan(outlen);
+    rfft_forward(plan, forward, 1.0);
+    //printf("forward\n");
+    //print_rfft_forward(forward, outlen);
+    // x[i]: P(x == n)
+    // n > 0
+    for (int64_t n = 1; n < xleft+xlen; n++) {
+        int64_t i = n-xleft;
+        // we need to offset this part in the "time" domain.
+        // To avoid re-calculating FFTs, we rotate in the frequency domain
+        //call signature: (from, to, factor, len, n, offset);
+        //printf("n: %ld, offset: %ld\n", n, n*yleft-(*lower));
+        accum_exp_forward_rfft(forward, out, x[i], outlen, n, n*yleft-(*lower));
+        //printf("out after n=%ld, x[%ld]=%f:\n", n, i, x[i]);
+        //print_rfft_forward(out, outlen);
+    }
+    if (xleft < 0) { // n < 0
+        memset(forward, 0, outlen*sizeof(double));
+        memcpy(forward, y, ylen*sizeof(double));
+        flip(forward, outlen);
+        rfft_forward(plan, forward, 1.0);
+    }
+    //int j = 0;
+    for (int64_t n = xleft; n < 0 && n < xleft+xlen; n++) {
+        //printf("n: %ld\n", n);
+        int64_t i = n-xleft;
+        int64_t right_bound;
+        if (yleft == 0) {
+            right_bound = 0;//n*(yleft+ylen-1);
+            //printf("right_bound: %ld\n", right_bound);
+        } else {
+            // bound could be 0
+            right_bound = n*yleft;
+            //printf("right_bound: %ld\n", right_bound);
+        }
+        right_bound -= n+1; // Offsets the fact that convolutions shift.
+        int64_t offset = right_bound - (*upper);
+        //printf(" offset: %ld\n", offset);
+        accum_exp_forward_rfft(forward, out, x[i], outlen, -n, offset);
+    }
+    rfft_backward(plan, out, 1.0/outlen);
+    // n = 0
+    if (xleft <= 0 && 0 < xleft+xlen) {
+        int64_t i = -xleft;
+        out[-(*lower)] += x[i];
+        //for (int64_t j = 0; j < outlen; j++) {
+        //    out[j] += x[i];
+        //}
+    }
+    free(x);
+    free(y);
+    free(forward);
+    //printf("out\n");
+    //print_real_arr(out, outlen);
+    return out;
+}
+
 double* divide_indices(double* x, int64_t* x_len, int64_t* x_left, int64_t n) {
     int swapped = 0;
     if (n < 0) {
@@ -225,9 +325,9 @@ double* divide_pmfs(double* x, int64_t xlen, double* y, int64_t ylen,
     int64_t outstop = xbounds[0]/ybounds[0];
     for (int i=0; i<2; i++) {
         for (int j=0; j<2; j++) {
-            int64_t thing = xbounds[i]/ybounds[j];
-            outleft = (outleft < thing) ? outleft : thing;
-            outstop = (outstop > thing) ? outstop : thing;
+            int64_t tmp = xbounds[i]/ybounds[j];
+            outleft = (outleft < tmp) ? outleft : tmp;
+            outstop = (outstop > tmp) ? outstop : tmp;
         }
     }
     // the loop. The idea is that we start with P(x/y==n) == 0 for all n,
@@ -257,7 +357,6 @@ double* divide_pmfs(double* x, int64_t xlen, double* y, int64_t ylen,
     free(y);
     return out;
 }
-
 
 void ip_cumsum(double* x, int64_t len) {
     if (len == 0) {

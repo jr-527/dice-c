@@ -512,3 +512,53 @@ Token of_1D(Token i, Token d) {
 
 // In this case it's the same as regular multiplication.
 #define of_D1(x,y) mulD1(x,y)
+
+Token of_DD(Token d1, Token d2) {
+    // at_multiply_pmfs manages memory
+    // cannot shrink (won't receive distribution that's always 0)
+    int64_t upper;
+    d1.arr = at_multiply_pmfs(d1.arr, d1.len, d2.arr, d2.len,
+                              d1.left, d2.left, &(d1.left), &upper);
+    d1.len = upper - d1.left + 1;
+    return d1;
+}
+
+Token mod11(Token x, Token y) {
+    // stack memory
+    // cannot shrink
+    x.left = x.left % y.left;
+    return x;
+}
+
+Token modD1(Token d, Token x) {
+    if (x.left == 1 || x.left == -1) {
+        free(d.arr);
+        x.left = 0;
+        return x;
+    }
+    int64_t min = d.left % x.left;
+    int64_t max = d.left % x.left;
+    if (d.len < (x.left > 0 ? x.left : -x.left)) {
+        for (int i = d.left; i < d.len; i++) {
+            min = (d.left % i < min) ? d.left % i : min;
+            max = (d.left % i > max) ? d.left % i : max;
+        }
+    } else if (x.left < 0) { // really <= -2
+        min = x.left+1;
+        max = 0;
+    } else { // we exit earlier if x.left == 0, so >= 2
+        min = 0;
+        max = x.left-1;
+    }
+    int64_t new_len = max - min + 1;
+    double* arr = calloc(new_len, sizeof(double));
+    for (int i = 0; i < d.len; i++) {
+        int64_t j = (d.left + i) % x.left;
+        arr[j-min] += d.arr[i];
+    }
+    free(d.arr);
+    d.arr = arr;
+    d.len = new_len;
+    d.left = min;
+    return d;
+}
