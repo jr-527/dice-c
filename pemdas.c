@@ -261,7 +261,7 @@ int shunting_yard(Token tokens[], int num_tokens) {
         queue[q++] = stack[--s];
     }
     error:
-        return q;
+    return q;
 }
 
 Token reverse_polish(int q) {

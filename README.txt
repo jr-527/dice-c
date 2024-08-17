@@ -1,8 +1,8 @@
-How to run: On windows, double click "windows.exe". Windows defender will
+How to run: On windows, double click "dice-windows.exe". Windows defender will
 probably warn you that this is an unknown program. You'll have to run it
 anyways, because I am not spending money to get a certificate from Microsoft.
 
-On linux, run the file "linux".
+On linux, run the file "dice-linux" (or linux.sh for better text entry)
 
 You can also run these files through the command line. If you don't provide any
 arguments, it enters an interactive mode where you can repeatedly input things

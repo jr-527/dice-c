@@ -78,6 +78,9 @@ Token str_to_token(char input[]) {
     // or something in the form "%dd%d"
     Token out;
     out.left = out.right = 0; // so GCC shuts up
+    while (*input == ' ') {
+        input++;
+    }
     char x = input[0];
     if (char_is_operator(x) || x == '(' || x == ')') {
         out.type = x;
