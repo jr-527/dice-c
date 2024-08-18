@@ -5,6 +5,8 @@
 #include <string.h>
 #include "pocketfft-master/pocketfft.h"
 
+// This file contains various algorithms which are used on arrays.
+
 #define complex128_t double complex
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)

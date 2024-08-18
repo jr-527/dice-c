@@ -1,14 +1,17 @@
 #include "defs.c"
 #include "array_math.c"
 
+// This file implements arithmetic operators on tokens.
+// Any particurly fancy algorithming should be implemented in array_math.c
+
 void prepare_token(Token* t) {
-    if (t->type != 'd') {
+    if (t->type != DICE_EXPRESSION) {
         return;
     }
-    t->type = 'D';
+    t->type = PMF;
     t->arr = ndm(t->left, t->right);
     t->len = (t->left)*(t->right-1)+1;
-    // Converts dice expressions ('d') to distributions ('D') in-place.
+    // Converts dice expressions to distributions in-place.
     // Does nothing for all other token types.
 }
 
@@ -17,14 +20,14 @@ Token ___TS(Token t1, Token t2)
 where ___ is the operation, eg mul,
 T is the type of t1,
 S is the type of t2.
-This is where all the memory management happens. Any time a type 'D' is input, either:
+This is where all the memory management happens. Any time a type PMF is input, either:
 (1) free(d.arr) is called somewhere
 (2) d.arr is set to realloc(d.arr, ...) somewhere
 (3) d.arr is modified in-place
 
 Furthermore, any time we perform an operation that can shrink an array, we need to check if
 that can cause the array to have length 1. In that case, free the array and change type to
-'1'.
+CONSTANT.
 
 I think we only need
 ___D1
@@ -116,7 +119,7 @@ Token divD1(Token d1, Token i) {
     d1.arr = divide_indices(d1.arr, &(d1.len), &(d1.left), i.left);
     if (d1.len == 1) {
         free(d1.arr);
-        d1.type = '1';
+        d1.type = CONSTANT;
     }
     return d1;
 }
@@ -128,7 +131,7 @@ Token divDD(Token d1, Token d2) {
                          &d1.left, &d1.len);
     if (d1.len == 1) {
         free(d1.arr);
-        d1.type = '1';
+        d1.type = CONSTANT;
     }
     return d1;
 }
@@ -136,7 +139,7 @@ Token divDD(Token d1, Token d2) {
 Token div1D(Token i, Token d) {
     // Memory: handled by divDD
     // Shrinking is handled by divDD
-    i.type = 'D';
+    i.type = PMF;
     i.arr = malloc(sizeof(double));
     i.len = 1;
     i.arr[0] = 1.0;
@@ -187,7 +190,7 @@ Token neqD1(Token d, Token i) {
     // Memory: managed by equD1
     // Shrinking: handled by equD1
     d = equD1(d, i);
-    if (d.type == '1') {
+    if (d.type == CONSTANT) {
         d.left = 1-d.left;
         return d;
     }
@@ -212,14 +215,14 @@ Token equDD(Token d1, Token d2) {
         free(d1.arr);
         free(d2.arr);
         d1.left = 0;
-        d1.type = '1';
+        d1.type = CONSTANT;
         return d1;
     } else if (d1.len == 1 && d2.len == 1 && d1.left == d2.left) {
         // two degenerate distributions at same point -> certainly equal
         free(d1.arr);
         free(d2.arr);
         d1.left = 1;
-        d1.type = '1';
+        d1.type = CONSTANT;
         return d1;
     }
     double sum = 0.0;
@@ -249,7 +252,7 @@ Token neqDD(Token d1, Token d2) {
     // Memory: handled by neqDD
     // Shrinking: handled by equDD
     Token d = equDD(d1, d2);
-    if (d.type == '1') {
+    if (d.type == CONSTANT) {
         d.left = 1-d.left;
         return d;
     }
@@ -324,9 +327,9 @@ Token geqD1(Token d, Token i) {
     // Memory: handled by greD1
     double eq = T_at(d, i.left);
     d = greD1(d, i);
-    if (d.type == '1') {
+    if (d.type == CONSTANT) {
         d.arr = malloc(2*sizeof(double));
-        d.type = 'D';
+        d.type = PMF;
         d.arr[1] = d.left;
         d.arr[0] = 1-d.left;
         d.left = 0;
@@ -382,9 +385,9 @@ Token geq1D(Token i, Token d) {
     }
     double eq = T_at(d, i.left);
     d = gre1D(i, d);
-    if (d.type == '1') {
+    if (d.type == CONSTANT) {
         d.arr = malloc(2*sizeof(double));
-        d.type = 'D';
+        d.type = PMF;
         d.arr[1] = d.left;
         d.arr[0] = 1-d.left;
         d.left = 0;
@@ -404,14 +407,14 @@ Token greDD(Token d1, Token d2) {
         // all d1 > all d2, certainly true
         free(d1.arr);
         free(d2.arr);
-        d1.type = '1';
+        d1.type = CONSTANT;
         d1.left = 1;
         return d1;
     } else if (d1.left+d1.len-1 <= d2.left) {
         // all d1 <= all d2, certainly false
         free(d1.arr);
         free(d2.arr);
-        d1.type = '1';
+        d1.type = CONSTANT;
         d1.left = 0;
         return d1;
     }
@@ -450,14 +453,14 @@ Token leqDD(Token d1, Token d2) {
         // all d1 > all d2, certainly false
         free(d1.arr);
         free(d2.arr);
-        d1.type = '1';
+        d1.type = CONSTANT;
         d1.left = 0;
         return d1;
     } else if (d1.left+d1.len-1 <= d2.left) {
         // all d1 <= all d2, certainly true
         free(d1.arr);
         free(d2.arr);
-        d1.type = '1';
+        d1.type = CONSTANT;
         d1.left = 1;
         return d1;
     }

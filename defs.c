@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// This file contains common definitions and basic helpers used across various files.
+
 // token parsing
 /*
 type    Desc    Used attributes (not incl type)
@@ -28,35 +30,74 @@ typedef struct Token {
     char type;
 } Token;
 
-int char_is_operator(char x) {
+#define OP_ADD '+'
+#define OP_SUB '-'
+#define OP_MUL '*'
+#define OP_DIV '/'
+#define OP_AT '@'
+#define OP_MOD '%'
+#define OP_POW '^'
+#define OP_CON '|'
+#define OP_GRE '>'
+#define OP_LES '<'
+#define OP_GEQ '~'
+#define OP_LEQ '`'
+#define OP_EQU '='
+#define OP_NEQ ':'
+
+// had to change some of these to avoid collisions
+#define LPAREN '('
+#define RPAREN ')'
+#define COMMA ','
+#define DICE_EXPRESSION '['
+#define PMF ']'
+#define CONSTANT '\\'
+#define FUNCTION '{'
+
+int input_is_operator(char x) {
     switch (x) {
-        case '+': case '-':
-        case '*': case '/':
-        case '@': case '%':
-        case '^': case '|':
-        case '>': case '<':
-        case 'g': case 'l':
-        case '=': case 'n':
-        case '!': // needed to make logic work
-            return 1;
-        default:
-            return 0;
+    case '+': case '-':
+    case '*': case '/':
+    case '@': case '%':
+    case '^': case '|':
+    case '>': case '<':
+    //case 'g': case 'l':
+    case '=':// case 'n':
+    case '!': // needed for some logic
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+int byte_is_operator(char x) {
+    switch (x) {
+    case OP_ADD: case OP_SUB: case OP_DIV: case OP_MUL:
+    case OP_MOD: case OP_POW: case OP_CON: case OP_AT:
+    case OP_GRE: case OP_LES: case OP_GEQ: case OP_LEQ:
+    case OP_EQU: case OP_NEQ: 
+    case '!': // needed to make logic work
+        return 1;
+    default:
+        return 0;
     }
 }
 
 int is_operator(Token t) {
-    return char_is_operator(t.type);
+    return byte_is_operator(t.type);
 }
 
 void print_token(Token t) {
-    if (is_operator(t) || t.type == '(' || t.type == ')') {
+    if (is_operator(t) || t.type == LPAREN || t.type == RPAREN) {
         printf(" %c ", t.type);
-    } else if (t.type == 'd') {
+    } else if (t.type == DICE_EXPRESSION) {
         printf(" %ldd%ld ", t.left, t.right);
-    } else if (t.type == 'D') {
+    } else if (t.type == PMF) {
         printf(" <D start:%ld,len:%ld> ", t.left, t.len);
-    } else if (t.type == '1'){
+    } else if (t.type == CONSTANT) {
         printf(" %ld ", t.left);
+    } else if (t.type == FUNCTION) {
+        printf(" func%ld ", t.left);
     } else {
         printf(" <%c> ", t.type);
     }

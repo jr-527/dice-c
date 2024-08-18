@@ -29,7 +29,7 @@ void main_plot(Token t) {
 
 void handle_main(int argc, char const *argv[]) {
     Token t = main_parse(argc, argv);
-    if (t.type == '1' || (t.type == 'D' && t.len==1)) {
+    if (t.type == CONSTANT || (t.type == PMF && t.len==1)) {
         printf("answer is always %ld\n", t.left);
     } else {
         main_plot(t);
@@ -58,7 +58,6 @@ void interactive_mode() {
         if (len == 2 && (interactive_buf[0]=='q' || interactive_buf[0]=='Q')) {
             return;
         }
-        //printf("%s\n", fake_argv[0]);
         handle_main(2, fake_argv);
     }
 }
