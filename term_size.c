@@ -1,8 +1,12 @@
-//#include "term_size.h"
 #include <stdio.h>
 
 #ifdef _WIN32
 #include <windows.h>
+/**
+ * Finds the size of the user's terminal.
+ * \param[out] rows Location to store the number of rows (height)
+ * \param[out] cols Location to store the number of columns (width)
+ */
 void get_term_size(int* rows, int* cols) {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
@@ -14,6 +18,11 @@ void get_term_size(int* rows, int* cols) {
 #include <stdio.h>
 #include <unistd.h>
 
+/**
+ * Finds the size of the user's terminal.
+ * \param[out] rows Location to store the number of rows (height)
+ * \param[out] cols Location to store the number of columns (width)
+ */
 void get_term_size(int* rows, int* cols) {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);

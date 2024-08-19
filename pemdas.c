@@ -1,14 +1,22 @@
 #include "defs.c"
 #include "operators.c"
+#include "functions.c"
 #include <stdio.h>
 
 // This file handles order of operations and makes sure that the correct
 // functions are applied in the correct order.
 
-Token stack[128];
-Token queue[128];
+Token stack[128]; // RPN stack
+Token queue[128]; // Queue used to convert to RPN
 
-int precedence(Token t) {
+/**
+ * Returns operator precedence, such that if the precedence of x is greater
+ * than that of y, then precedence(x) > precedence(y)
+ * 
+ * \param t Token whose type is an OP_XXX constant
+ * \return Returns an int representing precedence
+ */
+int precedence(const Token t) {
     switch (t.type) {
     case OP_POW: // exponentiation
         return 40;
@@ -221,7 +229,19 @@ Token modT(Token x, Token y) {
     return x;
 }
 
-int shunting_yard(Token tokens[], int num_tokens) {
+/**
+ * This implements the shunting yard algorithm. It takes valid expressions in
+ * "standard" (infix) notation, made out of functions, operators, integer
+ * constants, and parentheses, and reorders them into RPN (postfix) notation.
+ * Note that this algorithm isn't sophisticated enough to work with a 4-level
+ * stack, so we'll need a larger stack. We also have functions which can have
+ * many arguments, so 4 wouldn't be enough anyways.
+ * 
+ * \param[in] tokens Array of Token structs, in "standard" (infix) notation
+ * \param num_tokens Length of tokens
+ * \return Returns the number of tokens placed in the RPN queue.
+ */
+int shunting_yard(const Token tokens[], const int num_tokens) {
     int q = 0;
     int s = 0;
     Token t;
@@ -268,7 +288,16 @@ int shunting_yard(Token tokens[], int num_tokens) {
     return q;
 }
 
-Token reverse_polish(int q) {
+/**
+ * Reads in tokens from the RPN queue and acts as an RPN calculator on them.
+ * For example, if the queue is
+ * [<5>, <2>, <+>, <2>, <*>],
+ * then this returns <14>
+ * 
+ * \param q Length of the RPN queue
+ * \return Returns the last output of the RPN calculations.
+ */
+Token reverse_polish(const int q) {
     // printf("reverse_polish stack:");
     // for (int i = 0; i < q; i++) {
         // print_token(queue[i]);
@@ -314,13 +343,14 @@ Token reverse_polish(int q) {
     return stack[0];
 }
 
-Token pemdas(Token tokens[], int len) {
-    /*
-    int n = shunting_yard(tokens, len);
-    for (int i = 0; i < n; i++) {
-        print(queue[i]);
-    }
-    printf("\n");
-    */
+/**
+ * Given an array of tokens representing an expression in "standard" (infix)
+ * order, this evaluates the expression.
+ * 
+ * \param tokens Array of tokens in infix order representing an expression
+ * \param len Length of tokens
+ * \return Returns the value of the expression
+ */
+Token pemdas(Token tokens[], const int len) {
     return reverse_polish(shunting_yard(tokens, len));
 }

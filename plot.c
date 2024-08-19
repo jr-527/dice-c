@@ -1,14 +1,15 @@
 #include "defs.c"
 #include <stdio.h>
-//#include <string.h>
-/*
-#define PLOT_BUF_LEN 1024
-char PLOT_BUF[PLOT_BUF_LEN];
-double DATA_BUF[PLOT_BUF_LEN];
-#define LEFT_OFFSET 1
-#define RIGHT_OFFSET 12
-*/
-void draw_horiz(int main_cols) {
+
+// This file makes neat ASCII plots.
+
+/**
+ * This draws a horizontal line to standard out.
+ * 
+ * \param main_cols The number of character columns we have to work with, as
+ * specified in main.c
+ */
+void draw_horiz(const int main_cols) {
     for (int i = 0; i < LEFT_OFFSET-1; i++) {
         PLOT_BUF[i] = ' ';
     }
@@ -23,9 +24,13 @@ void draw_horiz(int main_cols) {
     fflush(stdout);
 }
 
-// left: The label to put on the left (negative for no label)
-// right: same but on the right
-void draw_main(int main_cols, int r, double left, double right) {
+/**
+ * This prints one row of the plot window to standard out
+ * 
+ * \param left The label to put on the left of the row (negative for no label)
+ * \param right The label to put on the right of the row (negative for no label)
+ */
+void draw_main(const int main_cols, const int r, const double left, const double right) {
     if (left < 0) {
         for (int i = 0; i < LEFT_OFFSET-1; i++) {
             PLOT_BUF[i] = ' ';
@@ -59,7 +64,21 @@ void draw_main(int main_cols, int r, double left, double right) {
     fflush(stdout);
 }
 
-int fit_data(double* data, int64_t len, int main_cols, int main_rows, int64_t start,
+/**
+ * Parses a large array into something short that we can easily plot
+ * 
+ * \param[in] data The input PMF as an array. Should be positive, sum to 1.
+ * \param len Length of data
+ * \param main_cols Number of character columns to fit the ASCII art into
+ * \param main_rows Number of character rows to fit the ASCII art into
+ * \param start Abscissa value of data[0]
+ * \param[out] max Location to store the max of data
+ * \param[out] step Location to store the step size, as used by last2()
+ * \param[out] mean Location to store the expected value of the input PMF
+ * \param[out] stdev Location to put the standard deviation of the input PMF
+ */
+int fit_data(const double* data, const int64_t len, const int main_cols,
+             const int main_rows, const int64_t start,
              double* max, int* step, double* mean, double* stdev) {
     int out = 0;
     double mu, s, weight_sum, new_max;
@@ -138,7 +157,15 @@ int fit_data(double* data, int64_t len, int main_cols, int main_rows, int64_t st
     return out;
 }
 
-void last2(int64_t start, int step, int main_cols) {
+/**
+ * Prints the last two rows of the ASCII art to standard out.
+ *
+ * \param start leftmost x-label
+ * \param step If positive, the number of data points per "bin" (char column) in the plot.
+ * If negative, the number of columns per data point.
+ * \param main_cols Number of character columns to fit each row into.
+ */
+void last2(const int64_t start, const int step, const int main_cols) {
     char PLOT_BUF2[PLOT_BUF_LEN];
     for (int i = 0; i < PLOT_BUF_LEN; i++) {
         PLOT_BUF2[i] = ' ';
@@ -179,7 +206,16 @@ void last2(int64_t start, int step, int main_cols) {
     fflush(stdout);
 }
 
-void draw(int rows, int cols, double* data, int64_t start, int64_t len) {
+/** Draws an ASCII plot of the input data to standard out.
+ * 
+ * \param rows Number of rows (height) the plot must fit into
+ * \param cols Number of columns (width) the plot must fit into
+ * \param[in] data Array to plot. Should be positive, sum to 1.
+ * \param start Abscissa of data[0]
+ * \param len Length of data
+ */
+void draw(const int rows, int cols, const double* data,
+          const int64_t start, const int64_t len) {
     for (int i = 0; i < PLOT_BUF_LEN; i++) {
         PLOT_BUF[i] = '\0';
     }
@@ -195,7 +231,7 @@ void draw(int rows, int cols, double* data, int64_t start, int64_t len) {
     double mean, stdev;
     main_cols = fit_data(data, len, main_cols, main_rows, start,
                          &max, &step, &mean, &stdev);
-    printf("Average: %f, Standard deviation: %f\n", mean, stdev);
+    printf("Average: %.15g, Standard deviation: %.15g\n", mean, stdev);
     draw_horiz(main_cols);
     int counter = 0;
     for (int r = main_rows-1; r >= 0; r--) {

@@ -6,30 +6,17 @@
 
 // This handles string parsing.
 
-/*
-#define MAX_TOKENS 128
-#define TOKEN_LEN 128
-
-char PARSE_BUF[MAX_TOKENS][TOKEN_LEN];
-char INPUT_BUF[4096];
-
-typedef struct Token {
-    // if type is an operator, then this token is an operator (left/right are garbage)
-    // if type is CONSTANT, then this token is the integer token.left (right is garbage)
-    // if type is DICE_EXPR, then this token is a die expression, ie (token.left)d(token.right)
-    int left;
-    int right;
-    char type; // an operator, CONSTANT for int
-} Token;
-
-Token TOKEN_BUF[MAX_TOKENS];
-*/
-int split_tokens(char input[], int len) {
-    // Splits the input into a bunch of tokens, ie
-    // "1+(2+shoe)" ->
-    // PARSE_BUF = ["1", "+", "(", "2", "+", "shoe", ")", (garbage)]
-    // returns the number of strings returned.
-    // returns -1 if the function "failed" due to a buffer overflow
+/**
+ * Splits the input into a bunch of tokens, ie
+ * `"1+(2+shoe)"` -> `"1", "+", "(", "2", "+", "shoe", ")"`
+ * The tokens are written into PARSE_BUF such that PARSE_BUF[i] is a
+ * null-terminated string containing one token.
+ * 
+ * \param[in] input Input string
+ * \param len Length of input
+ * \return The number of tokens parsed
+ */
+int split_tokens(const char input[], const int len) {
     int token = 0; // Index of the token we're on
     int token_i = 0; // Index of next available spot in buffer
     for (int i = 0; i < len; i++) {
@@ -82,7 +69,13 @@ int split_tokens(char input[], int len) {
     return token+1;
 }
 
-Token str_to_token(char input[]) {
+/**
+ * Converts a string into a token representing that string.
+ * 
+ * \param input String
+ * \return Token representing that string
+ */
+Token str_to_token(const char input[]) {
     // input: a null-terminated string that's either an operator,
     // an integer,
     // or something in the form "%dd%d"
@@ -141,7 +134,14 @@ Token str_to_token(char input[]) {
     //scanf("%id%i", input, &(out.left), &(out.right));
 }
 
-int parse_token_main(int argc, char const* argv[]) {
+/**
+ * Parses input in the same format as main(int argc, char* argv[])
+ * 
+ * \param argc - argc as passed to main
+ * \param argv - argv as passed to main
+ * \return Returns the number of tokens parsed
+ */
+int parse_token_main(const int argc, char const* argv[]) {
     // split at arithmetic expressions
     int n = 0;
     for (int i = 1; i < argc; i++) {

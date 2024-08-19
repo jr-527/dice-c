@@ -4,6 +4,10 @@
 // This file implements arithmetic operators on tokens.
 // Any particurly fancy algorithming should be implemented in array_math.c
 
+/**
+ * Converts DICE_EXPRESSION tokens to PMF tokens in place.
+ * Does nothing for all other token types.
+ */
 void prepare_token(Token* t) {
     if (t->type != DICE_EXPRESSION) {
         return;
@@ -11,18 +15,16 @@ void prepare_token(Token* t) {
     t->type = PMF;
     t->arr = ndm(t->left, t->right);
     t->len = (t->left)*(t->right-1)+1;
-    // Converts dice expressions to distributions in-place.
-    // Does nothing for all other token types.
 }
 
 /* The following functions should be in the form
 Token ___TS(Token t1, Token t2)
 where ___ is the operation, eg mul,
-T is the type of t1,
-S is the type of t2.
+T is the type of t1 ('1' for CONSTANT, 'D' for PMF),
+S is the type of t2 ('1' for CONSTANT, 'D' for PMF).
 This is where all the memory management happens. Any time a type PMF is input, either:
 (1) free(d.arr) is called somewhere
-(2) d.arr is set to realloc(d.arr, ...) somewhere
+(2) d.arr = realloc(d.arr, ...) somewhere
 (3) d.arr is modified in-place
 
 Furthermore, any time we perform an operation that can shrink an array, we need to check if
@@ -35,7 +37,13 @@ ___DD
 ___1D
 */
 
-double T_at(Token d, int64_t n) {
+/**
+ * Helper function. Gets the value of the PMF of d with abscissa n.
+ * \param d Token of type PMF
+ * \param n Abscissa value we want to check, ie P(d==n)
+ * \return The probability that d == n
+ */
+double T_at(const Token d, const int64_t n) {
     if (n < d.left || n >= d.left + d.len) {
         return 0.0;
     }
@@ -225,8 +233,17 @@ Token equDD(Token d1, Token d2) {
         d1.type = CONSTANT;
         return d1;
     }
+    // If long double has 64 bit mantissa, it's 80-bit extended precision,
+    // which should have hardware support making it faster and more precise
+    // then Kahan summation. Less than 64 bit mantissa -> it's just an alias
+    // for double so we need Kahan summation, greater than 64 bit -> it's
+    // quad precision (software support), which is too slow.
+    #if LDBL_MANT_DIG == 64
+    long double sum = 0.0;
+    #else
     double sum = 0.0;
     double c = 0.0;
+    #endif
     for (int64_t i = 0; i < d2.len; i++) {
         // i is position in d2.arr
         // j is position in d1.arr
@@ -234,10 +251,14 @@ Token equDD(Token d1, Token d2) {
         if (j >= d1.len) {
             break;
         }
+        #if LDBL_MANT_DIG == 64
+        sum += d1.arr[j]*d2.arr[i];
+        #else
         double y = d1.arr[j] * d2.arr[i] - c;
         double t = sum + y;
         c = (t-sum)-y;
         sum = t;
+        #endif
         // sum += d1.arr[j] * d2.arr[i];
     }
     free(d2.arr);
@@ -418,21 +439,28 @@ Token greDD(Token d1, Token d2) {
         d1.left = 0;
         return d1;
     }
+    // same deal, Kahan vs extended precision
+    #if LDBL_MANT_DIG == 64
+    long double sum = 0.0;
+    #else
     double sum = 0.0;
     double c = 0.0;
+    #endif
     ip_cumsum(d1.arr, d1.len);
     for (int64_t n = d2.left; n < d2.left+d2.len; n++) {
         if (n >= d1.left+d1.len) {
             break;
         }
         // P(d1 > d2) = Sum_{n in d2} P(d1>i | d2=n) * P(d2=n) by law of total probability
-        // and we do Kahan summation of that
-        //double y = (1.0-T_at(d1, n))*T_at(d2, n) - c;
+        #if LDBL_MANT_DIG == 64
+        sum += (1.0-T_at(d1, n)) * d2.arr[n-d2.left];
+        #else
         double y = (1.0-T_at(d1, n)) * d2.arr[n-d2.left] - c;
         //double y = (1.0-d1.arr[i1])*d2.arr[i2] - c;
         double t = sum+y;
         c = (t-sum)-y;
         sum = t;
+        #endif
         // sum += (1.0-d1.arr[i1])*d2.arr[i2];
     }
     free(d2.arr);
@@ -464,22 +492,27 @@ Token leqDD(Token d1, Token d2) {
         d1.left = 1;
         return d1;
     }
+    // also Kahan vs 80-bit
+    #if LDBL_MANT_DIG == 64
+    long double sum = 0.0;
+    #else
     double sum = 0.0;
     double c = 0.0;
+    #endif
     ip_cumsum(d1.arr, d1.len);
     for (int64_t n = d2.left; n < d2.left+d2.len; n++) {
         if (n >= d1.left+d1.len) {
             break;
         }
         // P(d1 <= d2) = 1-P(d1 > d2) = 1-Sum_{n in d2} P(d1>i | d2=n) * P(d2=n) by law of total probability
-        // and we do Kahan summation of that
-        //double y = (1.0-T_at(d1, n))*T_at(d2, n) - c;
+        #if LDBL_MANT_DIG == 64
+        sum += (1.0-T_at(d1, n)) * d2.arr[n-d2.left];
+        #else
         double y = (1.0-T_at(d1, n)) * d2.arr[n-d2.left] - c;
-        //double y = (1.0-d1.arr[i1])*d2.arr[i2] - c;
         double t = sum+y;
         c = (t-sum)-y;
         sum = t;
-        // sum += (1.0-d1.arr[i1])*d2.arr[i2];
+        #endif
     }
     sum = 1.0-sum;
     free(d2.arr);
@@ -497,6 +530,7 @@ Token leqDD(Token d1, Token d2) {
 // then adding together that many copies of the RHS.
 // This is different from the * operator, which represents evaluating the LHS,
 // evaluating the RHS, then multiplying.
+
 Token of_1D(Token i, Token d) {
     // autoconvolve frees, and we free if we don't use it.
     // shrinking is handled
@@ -514,6 +548,7 @@ Token of_1D(Token i, Token d) {
 }
 
 // In this case it's the same as regular multiplication.
+
 #define of_D1(x,y) mulD1(x,y)
 
 Token of_DD(Token d1, Token d2) {
