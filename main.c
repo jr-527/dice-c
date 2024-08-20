@@ -31,6 +31,9 @@ void handle_main(int argc, char const *argv[]) {
     Token t = main_parse(argc, argv);
     if (t.type == CONSTANT || (t.type == PMF && t.len==1)) {
         printf("answer is always %ld\n", t.left);
+        if (t.type == PMF) {
+            free(t.arr);
+        }
     } else {
         main_plot(t);
         free(t.arr);
