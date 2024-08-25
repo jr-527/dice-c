@@ -44,7 +44,7 @@ void draw_main(const int main_cols, const int r, const double left, const double
             if (DATA_BUF[i-LEFT_OFFSET] >= r+(2.0/3)) {
                 PLOT_BUF[i] = '@';
             } else if (DATA_BUF[i-LEFT_OFFSET] >= r+(1.0/3)) {
-                PLOT_BUF[i] = 'x';
+                PLOT_BUF[i] = 'g';
             } else if (DATA_BUF[i-LEFT_OFFSET] >= r+.1) {
                 PLOT_BUF[i] = '_';
             } else {

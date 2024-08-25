@@ -247,7 +247,7 @@ int shunting_yard(const Token tokens[], const int num_tokens) {
     Token t;
     for (int i = 0; i < num_tokens; i++) {
         t = tokens[i];
-        if (t.type == CONSTANT || t.type == DICE_EXPRESSION) { // number
+        if (t.type == CONSTANT || t.type == DICE_EXPRESSION || t.type == DROPPER) { // number
             queue[q++] = t;
         } else if (t.type == FUNCTION) { // function
             stack[s++] = t;

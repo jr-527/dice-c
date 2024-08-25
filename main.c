@@ -46,8 +46,8 @@ void interactive_mode() {
     while (1) {
         fprintf(stderr, "Enter your input. Enter q to quit.\n");
         if (fgets(interactive_buf, 1024, stdin) == NULL) {
-            fprintf(stderr, "Error reading input.\n");
-            continue;
+            fprintf(stderr, "Exiting.\n");
+            return;
         }
         int len = strlen(interactive_buf);
         if (len == 1) {

@@ -42,6 +42,12 @@
  * function: A pre-defined function
  *  - type FUNCTION
  *  - left: Index of the function. Used by functions.c to dispatch the correct function.
+ *
+ * "drop" dice expression: Used to handle expressions like "4d6dl"
+ *  - type DROPPER
+ *  - left: same as regular dice expressions
+ *  - right: same as regular dice expressions
+ *  - len: extra value, number of things to drop (negative for dropping highest)
  */
 typedef struct Token {
     double* arr;
@@ -80,6 +86,8 @@ typedef struct Token {
 // This was originally '1', hence the names of functions like mul1D
 #define CONSTANT '\\'
 #define FUNCTION '{'
+// Needed to make some logic work
+#define DROPPER ';'
 
 /**
  * Returns true if the character, when input by a user, represents a binary operator,

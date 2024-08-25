@@ -9,12 +9,14 @@
  * Does nothing for all other token types.
  */
 void prepare_token(Token* t) {
-    if (t->type != DICE_EXPRESSION) {
-        return;
+    if (t->type == DROPPER) {
+        t->type = PMF;
+        t->arr = drop(t->right, t->left, t->len, &(t->left), &(t->len));
+    } else if (t->type == DICE_EXPRESSION) {
+        t->type = PMF;
+        t->arr = ndm(t->left, t->right);
+        t->len = (t->left)*(t->right-1)+1;
     }
-    t->type = PMF;
-    t->arr = ndm(t->left, t->right);
-    t->len = (t->left)*(t->right-1)+1;
 }
 
 /* The following functions should be in the form

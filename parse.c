@@ -108,6 +108,7 @@ Token str_to_token(const char input[]) {
             Exit(1);
         }
         sscanf(input+offset+1, "%ld%n", &(out.right), &count);
+        //printf("after \"end\" of token: \"%c\"\n", input[offset+1+count]);
         if (count > 10) {
             fprintf(stderr, "Number too big.\n");
             Exit(1);
@@ -116,7 +117,33 @@ Token str_to_token(const char input[]) {
             out.type = CONSTANT;
             out.left = 0;
         } else {
-            out.type = DICE_EXPRESSION;
+            int64_t dropper_val = 0;
+            const char first_char = input[offset+1+count];
+            if (first_char == 'd' || first_char == 'k') {
+                const char second_char = input[offset+2+count];
+                if (second_char == 'h' || second_char == 'l') {
+                    if (!isdigit(input[offset+3+count])) {
+                        dropper_val = 1;
+                    } else {
+                        sscanf(input+offset+3+count, "%ld", &dropper_val);
+                    }
+                } else {
+                    fprintf(stderr, "Invalid input (in dropping handler).\n");
+                    Exit(1);
+                }
+                if (first_char == 'd') {
+                    dropper_val = out.left - dropper_val;
+                } else {
+                    dropper_val *= -1;
+                }
+                if (second_char == 'h') {
+                    dropper_val *= -1;
+                }
+                out.len = dropper_val;
+                out.type = DROPPER;
+            } else {
+                out.type = DICE_EXPRESSION;
+            }
         }
     } else {
         if (input[offset] == ',') {

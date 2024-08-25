@@ -2,12 +2,19 @@
 #define FUNCTIONS_C
 #include "defs.c"
 #include "array_functions.c"
+#include "drop.h"
 
 // This file implements and dispatches "functions" (expressions which use
 // function syntax, like f(5,6) rather than 5*6 or 5d6)
 
+// when the user types func(a,b,c), we have:
+// stack_top[0] == c
+// stack_top[-1] == b
+// stack_top[-2] == a
+
 /**
  * Represents "advantage", the distribution of the maximum of two samples
+ * User usage: adv(x)
  * 
  * \param[in,out] stack_top The top of the RPN stack
  * \param[out] num_args Place to store the number of arguments popped off the stack
@@ -29,6 +36,7 @@ Token adv(Token* stack_top, int64_t* num_args) {
 
 /**
  * Represents "disadvantage", the distribution of the minimum of two samples
+ * User usage: adv(x)
  *
  * \param[in,out] stack_top The top of the RPN stack
  * \param[out] num_args Place to store the number of arguments popped off the stack
@@ -53,6 +61,7 @@ Token dis(Token* stack_top, int64_t* num_args) {
  * This function is clever and automatically swaps its second and third arguments
  * because I can never remember which is which, and it must hold that
  * trials >= position, so if trials < position we can just swap the two.
+ * User usage: order_stat(distribution, n1, n2)
  *
  * \param[in,out] stack_top Pointer to the top of the RPN stack
  * \param[out] num_args Place to store the number of arguments popped off the stack
@@ -93,6 +102,29 @@ Token order_stat(Token* stack_top, int64_t* num_args) {
     arr_order_stat(t.arr, t.len, trials, position);
     return t;
 }
+/**
+ * Calculates things along the line of 4d6dl.
+ * User usage: drop(faces, total, keep)
+ *
+ * \param[in,out] stack_top Pointer to the top of the RPN stack
+ * \param[out] num_args Place to store the number of arguments popped off the stack
+ *
+  /
+Token drop_func(Token* stack_top, int64_t* num_args) {
+    *num_args = 3;
+    Token keep = stack_top[0];
+    Token total = stack_top[-1];
+    Token faces = stack_top[-2];
+    if (keep.type != CONSTANT || total.type != CONSTANT || faces.type != CONSTANT) {
+        fprintf(stderr, "drop can only take integer arguments\n");
+        Exit(1);
+        return faces;
+    }
+    faces.arr = drop(total.left, faces.left, keep.left, &faces.left, &faces.len);
+    faces.type = PMF;
+    return faces;
+}
+*/
 
 /**
  * Struct used to associate a function (pointer) with a string representing
@@ -106,6 +138,7 @@ typedef struct FuncTuple {
 FuncTuple func_arr[] = { // keep this array sorted, for convenience
     {"adv", adv}, {"advantage", adv},
     {"dis", dis}, {"disadvantage", dis},
+    //{"drop", drop_func},
     {"order", order_stat}, {"order_stat", order_stat},
 };
 
