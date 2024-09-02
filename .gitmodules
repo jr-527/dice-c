@@ -1,3 +1,6 @@
 [submodule "better-fgets"]
 	path = better-fgets
 	url = https://github.com/jr-527/better-fgets.git
+[submodule "pocketfft"]
+	path = pocketfft
+	url = https://gitlab.mpcdf.mpg.de/mtr/pocketfft.git

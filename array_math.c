@@ -5,7 +5,7 @@
 #include <string.h>
 #include <float.h>
 #include <stdint.h>
-#include "pocketfft-master/pocketfft.h"
+#include "pocketfft/pocketfft.h"
 
 // This file contains various algorithms which are used on arrays.
 
