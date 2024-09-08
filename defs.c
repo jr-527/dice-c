@@ -5,6 +5,34 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifdef DEBUG_PRINT
+uint32_t hash(char *str, const uint32_t initial) {
+    uint32_t hsh = initial;
+    while (*str != '\0') {
+        hsh = 17000069*hsh + *str++;
+    }
+    return hsh;
+}
+
+char _debug_arr[4192];
+uint32_t _last_debug_hash = 0;
+#define debug(...) do { \
+    uint64_t _next_debug_hash = hash(__FILE__, __LINE__); \
+    if (_next_debug_hash != _last_debug_hash) { \
+        sprintf(_debug_arr, __VA_ARGS__); \
+        fprintf(stderr, "%-10s %-20s l%-4d: %s", __FILE__, __func__, __LINE__, _debug_arr); \
+    } else { \
+        fprintf(stderr, __VA_ARGS__);\
+    } \
+    _last_debug_hash = _next_debug_hash; \
+} while (0)
+
+#else
+
+#define debug(...) do {} while (0)
+
+#endif
+
 // This file contains common definitions and basic helpers used across various files.
 
 /**
@@ -138,18 +166,38 @@ int is_operator(const Token t) {
  */
 void print_token(const Token t) {
     if (is_operator(t) || t.type == LPAREN || t.type == RPAREN) {
-        printf(" %c ", t.type);
+        fprintf(stderr, " %c ", t.type);
     } else if (t.type == DICE_EXPRESSION) {
-        printf(" %ldd%ld ", t.left, t.right);
+        fprintf(stderr, " %ldd%ld ", t.left, t.right);
     } else if (t.type == PMF) {
-        printf(" <D start:%ld,len:%ld> ", t.left, t.len);
+        fprintf(stderr, " <D start:%ld,len:%ld> ", t.left, t.len);
     } else if (t.type == CONSTANT) {
-        printf(" %ld ", t.left);
+        fprintf(stderr, " %ld ", t.left);
     } else if (t.type == FUNCTION) {
-        printf(" func%ld ", t.left);
+        fprintf(stderr, " func%ld ", t.left);
     } else {
-        printf(" <%c> ", t.type);
+        fprintf(stderr, " <%c> ", t.type);
     }
+}
+
+void debug_print_token(const Token t) {
+    #ifdef DEBUG_PRINT
+    if (is_operator(t) || t.type == LPAREN || t.type == RPAREN) {
+        fprintf(stderr, " %c ", t.type);
+    } else if (t.type == DICE_EXPRESSION) {
+        fprintf(stderr, " %ldd%ld ", t.left, t.right);
+    } else if (t.type == PMF) {
+        fprintf(stderr, " <D start:%ld,len:%ld> ", t.left, t.len);
+    } else if (t.type == CONSTANT) {
+        fprintf(stderr, " %ld ", t.left);
+    } else if (t.type == FUNCTION) {
+        fprintf(stderr, " func%ld ", t.left);
+    } else {
+        fprintf(stderr, " <%c> ", t.type);
+    }
+    #else
+    (void)t;
+    #endif
 }
 
 int exit_flag = 0; // If true, say something when exiting.

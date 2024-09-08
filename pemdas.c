@@ -271,9 +271,6 @@ int shunting_yard(const Token tokens[], const int num_tokens) {
                 queue[q++] = stack[--s];
             }
             s--;
-            //if (stack[s-1].type == FUNCTION) {
-            //    stack[s++] = ; // wtf happened here?
-            //}
         } else { // error
             fprintf(stderr, "Invalid type '%c'\n", t.type);
             goto error;
@@ -298,11 +295,11 @@ int shunting_yard(const Token tokens[], const int num_tokens) {
  * \return Returns the last output of the RPN calculations.
  */
 Token reverse_polish(const int q) {
-    // printf("reverse_polish stack:");
-    // for (int i = 0; i < q; i++) {
-        // print_token(queue[i]);
-    // }
-    // printf("\n");
+    debug("reverse_polish stack:");
+    for (int i = 0; i < q; i++) {
+        debug_print_token(queue[i]);
+    }
+    debug("\n");
     int s = 0;
     for (int i = 0; i < q; i++) {
         prepare_token(queue+i);

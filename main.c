@@ -9,15 +9,21 @@
 #include "pemdas.c"
 #include "better-fgets/enter_line.c"
 
-Token main_parse(int argc, char const *argv[]) {
+int main_parse(int argc, char const *argv[], Token* t) {
     int n = parse_token_main(argc, argv);
-    Token t = pemdas(TOKEN_BUF, n);
-    return t;
+    if (n == -1) {
+        return -1;
+    }
+    *t = pemdas(TOKEN_BUF, n);
+    return 0;
 }
 
 void main_plot(Token t) {
     int rows, cols;
     get_term_size(&rows, &cols);
+    #ifdef DEBUG_PRINT
+    rows = 20;
+    #endif
     if (rows > 10000 || rows <= 0 || cols > 10000 || cols <= 0) {
         // we're probably printing to a file or something
         rows = 30;
@@ -29,7 +35,11 @@ void main_plot(Token t) {
 }
 
 void handle_main(int argc, char const *argv[]) {
-    Token t = main_parse(argc, argv);
+    Token t;
+    if (main_parse(argc, argv, &t) == -1) {
+        fprintf(stderr, "Invalid input.\n");
+        return;
+    }
     if (t.type == CONSTANT || (t.type == PMF && t.len==1)) {
         printf("answer is always %ld\n", t.left);
         if (t.type == PMF) {
@@ -64,6 +74,10 @@ void interactive_mode() {
             interactive_buf[len-1] = '\0';
             if (len == 2 && (interactive_buf[0]=='q' || interactive_buf[0]=='Q')) {
                 return;
+            } else if (len == 3 && !strncmp(":q", interactive_buf, 2)) {
+                return;
+            } else if (len == 4 && !strncmp(":q!", interactive_buf, 3)) {
+                return;
             }
         } else {
             int code = type_line(interactive_buf);
@@ -84,6 +98,10 @@ void interactive_mode() {
                 continue;
             }
             if (len==1 && (interactive_buf[0]=='q' || interactive_buf[0]=='Q')) {
+                return;
+            } else if (len == 2 && !strncmp(":q", interactive_buf, 2)) {
+                return;
+            } else if (len == 3 && !strncmp(":q!", interactive_buf, 3)) {
                 return;
             }
         }

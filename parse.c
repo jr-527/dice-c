@@ -17,6 +17,7 @@
  * \return The number of tokens parsed
  */
 int split_tokens(const char input[], const int len) {
+    debug("split_tokens(\"%s\")\n", input);
     int token = 0; // Index of the token we're on
     int token_i = 0; // Index of next available spot in buffer
     for (int i = 0; i < len; i++) {
@@ -29,9 +30,9 @@ int split_tokens(const char input[], const int len) {
                     return -1;
                 }
                 if (x == ',') {
-                    fprintf(stderr, "Cannot start input with a comma\n");
-                    Exit(1);
-                    return -1;
+                    // fprintf(stderr, "Cannot start input with a comma\n");
+                    // Exit(1);
+                    // return -1;
                 }
                 PARSE_BUF[token][0] = x;
                 PARSE_BUF[token][1] = '\0';
@@ -108,7 +109,7 @@ Token str_to_token(const char input[]) {
             Exit(1);
         }
         sscanf(input+offset+1, "%ld%n", &(out.right), &count);
-        //printf("after \"end\" of token: \"%c\"\n", input[offset+1+count]);
+        debug("after \"end\" of token: \"%c\"\n", input[offset+1+count]);
         if (count > 10) {
             fprintf(stderr, "Number too big.\n");
             Exit(1);
@@ -161,6 +162,85 @@ Token str_to_token(const char input[]) {
     //scanf("%id%i", input, &(out.left), &(out.right));
 }
 
+#define PAREN_STACK_SIZE 1024
+int paren_stack[PAREN_STACK_SIZE];
+int paren_stack_i = 0;
+
+int str_stack_push(int n) {
+    if (paren_stack_i == PAREN_STACK_SIZE) {
+        return -1;
+    }
+    paren_stack[paren_stack_i++] = n;
+    return 0;
+}
+
+int str_stack_peek() {
+    if (paren_stack_i > 0) {
+        return paren_stack[paren_stack_i-1];
+    }
+    return -1;
+}
+
+void str_stack_discard_top() {
+    // we only call this after a call to str_stack_peek, so no need to check
+    paren_stack_i--;
+}
+
+int reformat_functions(const int argc, char const* argv[], char* out) {
+    int paren_depth = 0;
+    int prev_is_alpha = 0;
+    int n = 0;
+    for (int i = 1; i < argc; i++) {
+        for (int j = 0; argv[i][j] != '\0'; j++) {
+            // either letter, comma, (, or )
+            const char c = argv[i][j];
+            if (isalpha(c)) {
+                prev_is_alpha = 1;
+                out[n++] = c;
+            } else {
+                if (prev_is_alpha && c == '(') {
+                    out[n++] = '(';
+                    if (str_stack_push(paren_depth) == -1) {
+                        goto err;
+                    }
+                }
+                if (c == '(') {
+                    out[n++] = '(';
+                    paren_depth++;
+                } else if (c == ',') {
+                    out[n++] = ')';
+                    out[n++] = '(';
+                } else if (c == ')') {
+                    paren_depth--;
+                    int stack_level = str_stack_peek();
+                    if (stack_level > paren_depth) {
+                        goto err;
+                    }
+                    if (stack_level == paren_depth) {
+                        out[n++] = ')';
+                        str_stack_discard_top();
+                    }
+                    out[n++] = ')';
+                } else {
+                    out[n++] = c;
+                }
+                prev_is_alpha = 0;
+            }
+        }
+    }
+    if (paren_depth != 0) {
+        goto err;
+    }
+    out[n] = '\0';
+    debug("out: %s\n", out);
+    debug("regular return\n");
+    return n;
+    err:
+    debug("error return\n");
+    return -1;
+    // non-critical error
+}
+
 /**
  * Parses input in the same format as main(int argc, char* argv[])
  * 
@@ -170,10 +250,21 @@ Token str_to_token(const char input[]) {
  */
 int parse_token_main(const int argc, char const* argv[]) {
     // split at arithmetic expressions
-    int n = 0;
-    for (int i = 1; i < argc; i++) {
-        n += sprintf(INPUT_BUF + n, "%s", argv[i]);
+    // int n = 0;
+    // for (int i = 1; i < argc; i++) {
+    //     for (int j = 0; argv[i][j] != '\0'; j++) {
+    //         if (argv[i][j] != ' ') {
+    //             INPUT_BUF[n++] = argv[i][j];
+    //         }
+    //     }
+    //     // n += sprintf(INPUT_BUF + n, "%s", argv[i]);
+    // }
+    // INPUT_BUF[n+1] = '\0';
+    int n = reformat_functions(argc, argv, INPUT_BUF);
+    if (n == -1) {
+        return -1;
     }
+    debug("INPUT_BUF: %s\n", INPUT_BUF);
     int num_tokens = split_tokens(INPUT_BUF, n);
     int j = 0;
     int possible_unary = 1;
@@ -211,14 +302,14 @@ int parse_token_main(const int argc, char const* argv[]) {
             TOKEN_BUF[j-1].left = -1;
             TOKEN_BUF[j++].type = OP_MUL;
             num_tokens_parsed += 1;
-        } else if (i > 0
-                   && (TOKEN_BUF[j-1].type==LPAREN || TOKEN_BUF[j-1].type==DICE_EXPRESSION)
-                   && TOKEN_BUF[j-2].type == RPAREN) {
-            // implict multiplication
-            TOKEN_BUF[j] = TOKEN_BUF[j-1];
-            TOKEN_BUF[j-1].type = OP_MUL;
-            j += 1;
-            num_tokens_parsed += 1;
+        // } else if (i > 0
+        //            && (TOKEN_BUF[j-1].type==LPAREN || TOKEN_BUF[j-1].type==DICE_EXPRESSION)
+        //            && TOKEN_BUF[j-2].type == RPAREN) {
+        //     // implict multiplication
+        //     TOKEN_BUF[j] = TOKEN_BUF[j-1];
+        //     TOKEN_BUF[j-1].type = OP_MUL;
+        //     j += 1;
+        //     num_tokens_parsed += 1;
         }
         possible_unary = is_operator(TOKEN_BUF[j-1]) || TOKEN_BUF[j-1].type == LPAREN;
     }
